@@ -1,9 +1,0 @@
-{
-  "jchen1379": {
-    "dbConfig": {
-      "host": "localhost",
-      "port": 5984,
-      "dbURL": "mongodb+srv://jchen1379:jchen240681379@cluster0.t3n5z.mongodb.net/WebsiteTrafficData?retryWrites=true&w=majority"
-    }
-  }
-}
