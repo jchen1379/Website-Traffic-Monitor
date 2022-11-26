@@ -3,7 +3,6 @@ const express = require('express');
 const dbClient = require('./src/database/MongoDBClient');
 const bodyParser = require('body-parser');
 const dbDataInitialization = require('./src/utilities/DocumentAutoInit');
-const herokuKaffeine = require('./src/utilities/HerokuKaffeine');
 const dataAnalyticsTool = require('./src/utilities/DataAnalytics');
 
 const app = express();
@@ -15,8 +14,6 @@ app.use(bodyParser.urlencoded({
 }));
 
 dbDataInitialization.initializeDataEveryday();
-
-herokuKaffeine.keepHerokuAppAwake();
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
