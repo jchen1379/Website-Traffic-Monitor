@@ -2,8 +2,8 @@ const port = process.env.PORT || 3000;
 const express = require('express');
 const dbClient = require('./src/database/MongoDBClient');
 const bodyParser = require('body-parser');
-const dbDataInitialization = require('./src/utilities/DocumentAutoInit');
 const dataAnalyticsTool = require('./src/utilities/DataAnalytics');
+const {validateRequest} = require("./src/utilities/Validation");
 
 const app = express();
 
@@ -12,8 +12,6 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
 }));
-
-dbDataInitialization.initializeDataEveryday();
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -155,6 +153,23 @@ app.post('/website_traffic_monitor', async (req, res) => {
   });
 
   return res.status(200).json();
+})
+
+app.post('/init_documents', async (req, res) => {
+  validateRequest(req);
+  try {
+    // dbClient.reRegisterDataModel();
+    const domains = await dbClient.getAllTrackedDomainNames();
+    console.log(domains);
+    // for (const domain of domains) {
+    //   await dbClient.initiateTrafficData(domain);
+    //   await dbClient.initiateVisitedIPData(domain);
+    // }
+    return res.status(200).json();
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json(JSON.stringify(e));
+  }
 })
 
 app.listen(port, () => {
