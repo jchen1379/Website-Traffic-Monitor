@@ -32,6 +32,7 @@ app.get('/', (req, res) => {
 
 app.get('/get_all_traffic_data', async (req, res) => {
   try {
+    await dbClient.connectDbOnDemand();
     const domains = await dbClient.getAllTrackedDomainNames();
     const data = new Map();
     for (const domain of domains) {
@@ -40,26 +41,29 @@ app.get('/get_all_traffic_data', async (req, res) => {
     }
     return res.status(200).json(Object.fromEntries(data));
   } catch (e) {
-    return res.status(500).json(e);
+    console.log(e);
+    return res.status(500).json(JSON.stringify(e));
   }
 })
 
 app.get('/get_all_traffic_data/:domain', async (req, res) => {
   const domain = req.params['domain'];
   try {
+    await dbClient.connectDbOnDemand();
     const data = await dbClient.getAllTrafficData(domain);
     return res.status(200).json(data);
   } catch (e) {
-    return res.status(500).json(e);
+    console.log(e);
+    return res.status(500).json(JSON.stringify(e));
   }
 })
 
 app.get('/get_traffic_data/visits/days/:days', async (req, res) => {
   const days = req.params['days'];
   try {
+    await dbClient.connectDbOnDemand();
     const domains = await dbClient.getAllTrackedDomainNames();
     const data = new Map();
-
     const endDate = new Date();
     const startDate = new Date()
     startDate.setDate(endDate.getDate() - days);
@@ -70,64 +74,74 @@ app.get('/get_traffic_data/visits/days/:days', async (req, res) => {
     }
     return res.status(200).json(Object.fromEntries(data));
   } catch (e) {
-    return res.status(500).json(e);
+    console.log(e);
+    return res.status(500).json(JSON.stringify(e));
   }
 })
 
 app.get('/get_traffic_data/visits/domain/:domain/days/:days', async (req, res) => {
+  const {domain, days} = req.params;
+  const endDate = new Date();
+  const startDate = new Date()
+  startDate.setDate(endDate.getDate() - days);
   try {
-    const {domain, days} = req.params;
-
-    const endDate = new Date();
-    const startDate = new Date()
-    startDate.setDate(endDate.getDate() - days);
+    await dbClient.connectDbOnDemand();
     const result = await dbClient.getTrafficDataByTimeRange(domain, startDate.toISOString(), endDate.toISOString(), 'websiteVisitCount');
     return res.status(200).json(result);
   } catch (e) {
-    return res.status(500).json(e);
+    console.log(e);
+    return res.status(500).json(JSON.stringify(e));
   }
 })
 
 app.get('/get_traffic_data/visits/domain/:domain/range/:start/:end?', async (req, res) => {
+  const {domain, start, end} = req.params;
   try {
-    const {domain, start, end} = req.params;
+    await dbClient.connectDbOnDemand();
     const trafficData = await dbClient.getTrafficDataByTimeRange(domain, start, end, 'websiteVisitCount');
     return res.status(200).json(trafficData);
   } catch (e) {
-    return res.status(500).json(e);
+    console.log(e);
+    return res.status(500).json(JSON.stringify(e));
   }
 })
 
 app.get('/get_traffic_data/analytics/domain/:domain/range/:start/:end?', async (req, res) => {
+  const {domain, start, end} = req.params;
   try {
-    const {domain, start, end} = req.params;
+    await dbClient.connectDbOnDemand();
     const trafficData = await dbClient.getTrafficDataByTimeRange(domain, start, end);
     const result = dataAnalyticsTool.runAnalysis(trafficData);
     return res.status(200).json(result);
   } catch (e) {
-    return res.status(500).json(e);
+    console.log(e);
+    return res.status(500).json(JSON.stringify(e));
   }
 })
 
 app.get('/get_client_data/number_of_clients/domain/:domain', async (req, res) => {
   const domain = req.params['domain'];
   try {
+    await dbClient.connectDbOnDemand();
     const clientData = await dbClient.getAllClientVisitingData(domain);
     const result = dataAnalyticsTool.computeTotalVisitClients(clientData);
     return res.status(200).json(result);
   } catch (e) {
-    return res.status(500).json(e);
+    console.log(e);
+    return res.status(500).json(JSON.stringify(e));
   }
 })
 
 app.get('/get_traffic_data/analytics/domain/:domain/all', async (req, res) => {
   const domain = req.params['domain'];
   try {
+    await dbClient.connectDbOnDemand();
     const trafficData = await dbClient.getAllTrafficData(domain);
     const result = dataAnalyticsTool.runAnalysis(trafficData);
     return res.status(200).json(result);
   } catch (e) {
-    return res.status(500).json(e);
+    console.log(e);
+    return res.status(500).json(JSON.stringify(e));
   }
 })
 
@@ -142,29 +156,31 @@ app.post('/website_traffic_monitor', async (req, res) => {
   if (!domain)
     return res.status(400).json("INVALID REQUEST BODY!");
 
+  await dbClient.connectDbOnDemand();
+
   await dbClient.updateWebsiteVisitCount(domain, clientIP).catch((err) => {
     console.log(err);
-    return res.status(500).json(err);
+    return res.status(500).json(JSON.stringify(err));
   });
 
   await dbClient.updateClientVisitedProject(domain, clientIP, project).catch((err) => {
     console.log(err);
-    return res.status(500).json(err);
+    return res.status(500).json(JSON.stringify(err));
   });
 
   return res.status(200).json();
 })
 
 app.post('/init_documents', async (req, res) => {
-  validateRequest(req);
   try {
-    // dbClient.reRegisterDataModel();
+    validateRequest(req);
+    await dbClient.connectDbOnDemand();
+    dbClient.reRegisterDataModel();
     const domains = await dbClient.getAllTrackedDomainNames();
-    console.log(domains);
-    // for (const domain of domains) {
-    //   await dbClient.initiateTrafficData(domain);
-    //   await dbClient.initiateVisitedIPData(domain);
-    // }
+    for (const domain of domains) {
+      await dbClient.initiateTrafficData(domain);
+      await dbClient.initiateVisitedIPData(domain);
+    }
     return res.status(200).json();
   } catch (e) {
     console.log(e);

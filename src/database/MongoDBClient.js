@@ -6,7 +6,6 @@ const {
   getDateOfToday,
 } = require("./Utils");
 
-
 const trafficDataDBURL = process.env.WEBSITE_TRAFFIC_DATA_MONGODB;
 const clientsDataDBURL = process.env.VISITED_CLIENTS_DATA_MONGODB;
 
@@ -14,22 +13,37 @@ if (!trafficDataDBURL || !clientsDataDBURL) {
   throw "WEBSITE_TRAFFIC_DATA_MONGODB or/and VISITED_CLIENTS_DATA_MONGODB NOT FOUND IN ENV";
 }
 
+const websiteTrafficDatabase = new Mongoose();
+const visitedClientsDatabase = new Mongoose();
 let websiteTrafficDataModel = models.WebsiteTrafficData();
 let clientVisitingDataModel = models.ClientVisitingData();
 
-const websiteTrafficDatabase = new Mongoose();
-websiteTrafficDatabase.connect(trafficDataDBURL, null, (error => {
-  error ?
-    console.log(error) :
-    console.log("Website Traffic Database Connected!");
-}));
+async function connectDbOnDemand() {
+  if (websiteTrafficDatabase.connection.readyState === 1) {
+    console.log("websiteTrafficDatabase is connected. Skipping.");
+  } else {
+    websiteTrafficDatabase.connect(trafficDataDBURL, null, (error => {
+      error ?
+        console.log(error) :
+        console.log("Website Traffic Database Connected!");
+    }));
+  }
 
-const visitedClientsDatabase = new Mongoose();
-visitedClientsDatabase.connect(clientsDataDBURL, null, (error => {
-  error ?
-    console.log(error) :
-    console.log("Visited Clients Database Connected!");
-}))
+  if (visitedClientsDatabase.connection.readyState === 1) {
+    console.log("visitedClientsDatabase is connected. Skipping.");
+  } else {
+    visitedClientsDatabase.connect(clientsDataDBURL, null, (error => {
+      error ?
+        console.log(error) :
+        console.log("Visited Clients Database Connected!");
+    }));
+  }
+
+  while (websiteTrafficDatabase.connection.readyState !== 1 ||
+          visitedClientsDatabase.connection.readyState !== 1) {
+    await new Promise(res => setTimeout(res, 200));
+  }
+}
 
 function initiateTrafficData(collection) {
   const trafficData = websiteTrafficDatabase.model(collection, websiteTrafficDataModel);
@@ -191,6 +205,7 @@ function reRegisterDataModel() {
 }
 
 module.exports = {
+  connectDbOnDemand,
   updateWebsiteVisitCount,
   updateClientVisitedProject,
   getAllTrafficData,
