@@ -3,7 +3,6 @@ const express = require('express');
 const dbClient = require('./src/database/MongoDBClient');
 const bodyParser = require('body-parser');
 const dataAnalyticsTool = require('./src/utilities/DataAnalytics');
-const {validateRequest} = require("./src/utilities/Validation");
 
 const app = express();
 
@@ -172,20 +171,14 @@ app.post('/website_traffic_monitor', async (req, res) => {
 })
 
 app.post('/init_documents', async (req, res) => {
-  try {
-    validateRequest(req);
-    await dbClient.connectDbOnDemand();
-    dbClient.reRegisterDataModel();
-    const domains = await dbClient.getAllTrackedDomainNames();
-    for (const domain of domains) {
-      await dbClient.initiateTrafficData(domain);
-      await dbClient.initiateVisitedIPData(domain);
-    }
-    return res.status(200).json();
-  } catch (e) {
-    console.log(e);
-    return res.status(500).json(JSON.stringify(e));
+  await dbClient.connectDbOnDemand();
+  dbClient.reRegisterDataModel();
+  const domains = await dbClient.getAllTrackedDomainNames();
+  for (const domain of domains) {
+    await dbClient.initiateTrafficData(domain);
+    await dbClient.initiateVisitedIPData(domain);
   }
+  return res.status(200).json();
 })
 
 app.listen(port, () => {
