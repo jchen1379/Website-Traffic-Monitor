@@ -5,6 +5,12 @@
       "use": "@vercel/node"
     }
   ],
+  "crons": [
+    {
+      "path": "/init_documents",
+      "schedule": "0 0 * * *"
+    }
+  ],
   "routes": [
     {
       "src": "/(.*)",
